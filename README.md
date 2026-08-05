@@ -113,8 +113,18 @@ get Snowflake reading the static catalog end-to-end. See
 
 - **Per-table fixtures** (read by pointing any engine at a `metadata.json`):
   ```
-  gs://cartobq-iceberg-geo-testbed/{v2_flat_columns,v2_bbox_struct,v2_geo_convention,v3_geometry}/metadata/v1.metadata.json
+  gs://cartobq-iceberg-geo-testbed/{v2_flat_columns,v2_bbox_struct,v2_geo_convention,v3_geometry,v3_geography}/metadata/v1.metadata.json
   ```
+- **Bare parquet with parquet-format 2.11 logical types** — for testing a
+  *Parquet* reader without involving Iceberg at all, the data files stand
+  alone over plain HTTPS (no auth):
+  ```
+  https://storage.googleapis.com/cartobq-iceberg-geo-testbed/v3_geometry/data/<region>.parquet   # Geometry(crs=)
+  https://storage.googleapis.com/cartobq-iceberg-geo-testbed/v3_geography/data/<region>.parquet  # Geography(crs=, algorithm=spherical)
+  ```
+  `v3_geometry` and `v3_geography` hold **byte-identical WKB** (same regions,
+  same seeds) and differ only in the declared logical type — a controlled A/B
+  for isolating 2.11 type-annotation support from data handling.
 - **Static IRC catalog** (namespaces `v2`, `v3`):
   - GCS: `https://storage.googleapis.com/cartobq-iceberg-geo-testbed/catalog`
   - S3: `https://carto-iceberg-geo-testbed-public.s3.us-east-1.amazonaws.com/catalog`
@@ -138,6 +148,7 @@ python -m testbed.v2_flat_columns
 python -m testbed.v2_bbox_struct
 python -m testbed.v2_geo_convention      # the SPEC.md reference implementation
 python -m testbed.v3_geometry
+python -m testbed.v3_geography           # same points, GEOGRAPHY logical type
 
 # Probe engines
 python engines/duckdb/run.py
@@ -167,7 +178,7 @@ testbed/           # SHARED — fixtures + the static-catalog generator
   _static_catalog.py        # Hand-writes metadata.json + manifest avro (V2 & V3)
   static_rest_catalog.py    # The serverless static IRC catalog generator
   v2_flat_columns.py / v2_bbox_struct.py / v2_geo_convention.py
-  v3_geometry.py / v3_geometry_lineage.py
+  v3_geometry.py / v3_geometry_lineage.py / v3_geography.py
 
 engines/           # SHARED — per-engine runners + READMEs
   duckdb/ bigquery/ snowflake/ sedona/ databricks/ oracle/ polaris/

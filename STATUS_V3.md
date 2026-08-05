@@ -18,8 +18,7 @@ Companion files:
 
 ## The reference catalog
 
-The testbed ships **two V3 fixtures** demonstrating both
-spec-permitted variants:
+The testbed ships **three V3 geo fixtures**:
 
 - **`v3_geometry`** — spec-minimal (`row-lineage: false`). The canonical
   reference; readers should accept this if they support V3 at all.
@@ -28,11 +27,20 @@ spec-permitted variants:
   at the Iceberg V3 spec field IDs (`2147483545` / `2147483544`). For
   testing stricter readers that require lineage columns be present
   regardless of the metadata flag.
+- **`v3_geography`** — the `geography` twin of `v3_geometry`: Iceberg
+  type token `geography`, parquet logical type
+  `Geography(crs=, algorithm=spherical)`. Same regions and seeds, so the
+  WKB payloads are **byte-identical** to `v3_geometry` (verified across
+  all 10 files) — a reader that handles one and not the other differs on
+  the type annotation alone, not on the data. The omitted type-token
+  parameters default to `OGC:CRS84` / `spherical` per spec, matching what
+  the parquet annotation declares.
 
-The shared properties of both fixtures:
+The shared properties of these fixtures:
 
 - `format-version: 3` with `row-lineage: false` (spec-permitted off)
-- Schema: `id: string`, `geom: geometry`. No CRS in the type token —
+- Schema: `id: string` plus the geo column (`geom: geometry`, or
+  `geog: geography` for `v3_geography`). No CRS in the type token —
   CRS info lives in the parquet column's logical type.
 - `next-row-id`, `last-column-id`, `statistics: []`,
   `partition-statistics: []` populated as the V3 spec expects.
@@ -41,16 +49,21 @@ The shared properties of both fixtures:
   `testbed/_static_catalog.py`). Includes `first_row_id` on data
   files, `first_row_id` on the manifest-list entry, and the
   `iceberg.schema` metadata key Snowflake-managed V3 emits.
-- **Parquet data files use the native `Geometry(crs=)` logical type**
-  via `geoarrow-pyarrow` (GeoParquet 2.0 style), with WKB-encoded
-  point payloads. Same column-level encoding Snowflake's own managed
-  V3 writer produces.
+- **Parquet data files use the native parquet-format 2.11 logical
+  types** via `geoarrow-pyarrow` (GeoParquet 2.0 style) — `Geometry(crs=)`,
+  or `Geography(crs=, algorithm=spherical)` for `v3_geography` — with
+  WKB-encoded point payloads. Same column-level encoding Snowflake's own
+  managed V3 writer produces.
+  Because the data files carry the logical type on their own, they are
+  also usable as **bare parquet conformance files**, with no Iceberg
+  metadata involved:
+  `https://storage.googleapis.com/cartobq-iceberg-geo-testbed/{v3_geometry,v3_geography}/data/<region>.parquet`
 - Per-file geometry bounds in the `packed_xy_le` encoding (16 bytes:
   little-endian X, little-endian Y) — confirmed against Snowflake's
   own bound bytes byte-for-byte.
 
-Published at `gs://cartobq-iceberg-geo-testbed/v3_geometry/` (public).
-This is what V3 readers should be tested against.
+Published at `gs://cartobq-iceberg-geo-testbed/{v3_geometry,v3_geography}/`
+(public). This is what V3 readers should be tested against.
 
 A reader that rejects either fixture has an *engine-side* gap to file
 against the engine vendor, not against this testbed.
