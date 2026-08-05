@@ -11,6 +11,16 @@ For each fixture:
 
 Configure with env vars (or edit BUCKET below):
   BUCKET — GCS bucket name. Default: cartobq-iceberg-geo-testbed.
+
+Usage:
+  python engines/bigquery/_setup.py                  # all fixtures
+  python engines/bigquery/_setup.py v3_geography     # only the named ones
+
+Prefer naming a fixture. The upload is `gsutil rsync -d`, which *deletes*
+remote files that aren't present locally — running the full set prunes the
+accumulated `snap-*.avro` history under already-published fixtures (a local
+build has only the snapshots it just wrote). Publishing one new fixture
+should touch only that fixture's prefix.
 """
 
 from __future__ import annotations
@@ -25,7 +35,14 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from testbed import v2_flat_columns, v2_bbox_struct, v3_geometry, v2_geo_convention, v3_geometry_lineage  # noqa: E402
+from testbed import (  # noqa: E402
+    v2_flat_columns,
+    v2_bbox_struct,
+    v3_geometry,
+    v2_geo_convention,
+    v3_geometry_lineage,
+    v3_geography,
+)
 
 
 BUCKET = os.environ.get("BUCKET", "cartobq-iceberg-geo-testbed")
@@ -37,11 +54,24 @@ FIXTURES = [
     ("v3_geometry", v3_geometry),
     ("v2_geo_convention", v2_geo_convention),
     ("v3_geometry_lineage", v3_geometry_lineage),
+    ("v3_geography", v3_geography),
 ]
 
 
 def main() -> int:
-    for name, mod in FIXTURES:
+    wanted = set(sys.argv[1:])
+    if wanted:
+        known = {name for name, _ in FIXTURES}
+        unknown = wanted - known
+        if unknown:
+            print(f"unknown fixture(s): {', '.join(sorted(unknown))}")
+            print(f"known: {', '.join(sorted(known))}")
+            return 2
+        fixtures = [(n, m) for n, m in FIXTURES if n in wanted]
+    else:
+        fixtures = FIXTURES
+
+    for name, mod in fixtures:
         location_uri = f"gs://{BUCKET}/{name}"
         print(f"\n=== {name} -> {location_uri} ===")
 

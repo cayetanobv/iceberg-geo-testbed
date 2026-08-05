@@ -65,8 +65,26 @@ The shared properties of these fixtures:
 Published at `gs://cartobq-iceberg-geo-testbed/{v3_geometry,v3_geography}/`
 (public). This is what V3 readers should be tested against.
 
-A reader that rejects either fixture has an *engine-side* gap to file
-against the engine vendor, not against this testbed.
+A reader that rejects any of these fixtures has an *engine-side* gap to
+file against the engine vendor, not against this testbed.
+
+### `geography`: the gap is the Iceberg type layer, not Parquet
+
+The engine table below tracks `geometry` only. The `v3_geography` twin
+buys a sharper diagnosis, because it isolates *which layer* of an engine
+lacks geography support — the parquet logical type or the Iceberg type
+token. First result, DuckDB 1.5.3 (2026-08-05):
+
+| Path | `v3_geometry` | `v3_geography` |
+|---|---|---|
+| `read_parquet(…/data/*.parquet)` | ✅ column arrives as native `GEOMETRY` | ✅ **also** native `GEOMETRY` — `Geography(crs=, algorithm=spherical)` is recognized, no WKB decode needed; `ST_Intersects` over the California window returns all 1000 points and correctly excludes the other 9 regions |
+| `iceberg_scan(…/metadata/v1.metadata.json)` | ✅ `COUNT(*) = 10000` | ❌ `Not implemented Error: Geography support` |
+
+Same bytes on disk in both columns of that table — so DuckDB's geography
+gap lives entirely in its Iceberg type mapping. Its Parquet reader already
+does the right thing. That's a much more actionable bug report than
+"geography doesn't work," and it's only visible because the two fixtures
+are byte-identical apart from the annotation.
 
 ### Cross-engine V3 interop verified
 
