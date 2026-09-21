@@ -40,7 +40,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import geoarrow.pyarrow as ga
 from pyiceberg.schema import Schema
-from pyiceberg.types import BinaryType, NestedField, StringType
+from pyiceberg.types import GeometryType, NestedField, StringType
 
 from .common import REGIONS, packed_xy_le, stable_seed, wkb_point_le
 from ._static_catalog import write_static_catalog
@@ -59,7 +59,7 @@ def _field_meta(field_id: int) -> dict:
 
 PY_SCHEMA = Schema(
     NestedField(1, "id", StringType(), required=False),
-    NestedField(2, "geom", BinaryType(), required=False),
+    NestedField(2, "geom", GeometryType(), required=False),
 )
 
 GEOM_EXT_TYPE = ga.wkb().with_crs(ga.OGC_CRS84)

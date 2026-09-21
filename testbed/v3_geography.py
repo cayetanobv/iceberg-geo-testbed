@@ -33,7 +33,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import geoarrow.pyarrow as ga
 from pyiceberg.schema import Schema
-from pyiceberg.types import BinaryType, NestedField, StringType
+from pyiceberg.types import GeographyType, NestedField, StringType
 
 from .common import REGIONS, packed_xy_le, stable_seed, wkb_point_le
 from ._static_catalog import write_static_catalog
@@ -45,11 +45,13 @@ def _field_meta(field_id: int) -> dict:
     return {"PARQUET:field_id": str(field_id)}
 
 
-# pyiceberg 0.11.1 has no GeographyType — same BinaryType fallback as
-# v3_geometry. The real type lives in metadata.json + the parquet annotation.
+# pyiceberg >= 0.12.0 has a native GeographyType (bare "geography" token;
+# CRS / algorithm default to OGC:CRS84 / spherical per spec). As in
+# v3_geometry, the type readers see lives in metadata.json + the parquet
+# annotation; this schema only feeds the manifest writer.
 PY_SCHEMA = Schema(
     NestedField(1, "id", StringType(), required=False),
-    NestedField(2, "geog", BinaryType(), required=False),
+    NestedField(2, "geog", GeographyType(), required=False),
 )
 
 # Spherical edges are what make this GEOGRAPHY rather than GEOMETRY: pyarrow

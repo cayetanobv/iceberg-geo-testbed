@@ -27,16 +27,16 @@ Iceberg V3 (mid-2025) introduced native `geometry`/`geography` types
 with per-file bounds in the manifest, promising file-level pruning for
 spatial predicates. As of mid-2026, **no engine reads a *portable,
 externally-written* V3 geometry table end-to-end.** The one exception is
-Snowflake, which delivers V3 geometry fully — but only for tables it
-*manages itself*; it can't yet read an externally-produced V3 table.
-Everyone else rejects the type at parse, or (DuckDB) reads the column but
-can't prune on it. See **[STATUS_V3.md](./STATUS_V3.md)** for the live
+Snowflake, which delivers V3 geometry fully for the tables it manages and
+for externally-produced ones with a spec-compliant writer, and DuckDB 1.5.5,
+which reads and prunes on it with bbox predicates. Everyone else rejects the
+type at parse. See **[STATUS_V3.md](./STATUS_V3.md)** for the live
 per-engine detail. In summary:
 
-- **DuckDB 1.5.3**: reads typed geometry fine (once the parquet uses
-  GeoParquet-2.0 native typing), but `IcebergValue::DeserializeValue` has
-  no `GEOMETRY` branch, so the first spatial predicate's manifest-bound
-  pruning fails ([duckdb-iceberg#1002](https://github.com/duckdb/duckdb-iceberg/issues/1002)).
+- **DuckDB 1.5.5**: reads typed geometry (once the parquet uses
+  GeoParquet-2.0 native typing) and prunes on the manifest geometry bounds
+  via `ST_Intersects_Extent` / `&&` ([duckdb-iceberg#1030](https://github.com/duckdb/duckdb-iceberg/pull/1030));
+  plain `ST_Intersects` is correct but full-scans.
 - **BigQuery / Sedona**: reject the `geometry(...)` type token at parse.
   Sedona's Iceberg-Spark also can't **write** V3 geometry (UDT mapper missing).
 - **Databricks DBSQL 2026.10**: `GEOMETRY(SRID)`/`GEOGRAPHY(SRID)` work in

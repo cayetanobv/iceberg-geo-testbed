@@ -36,7 +36,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import geoarrow.pyarrow as ga
 from pyiceberg.schema import Schema
-from pyiceberg.types import BinaryType, NestedField, StringType
+from pyiceberg.types import GeometryType, NestedField, StringType
 
 from .common import REGIONS, packed_xy_le, stable_seed, wkb_point_le
 from ._static_catalog import write_static_catalog
@@ -48,14 +48,14 @@ def _field_meta(field_id: int) -> dict:
     return {"PARQUET:field_id": str(field_id)}
 
 
-# pyiceberg 0.11.1 has no GeometryType — fall back to BinaryType in the python
-# schema (used only by the manifest writer to validate field types). The actual
-# column type is declared in the hand-written metadata.json (as bare
-# "geometry") and in the parquet file (as native Geometry logical type via
-# geoarrow-pyarrow).
+# pyiceberg >= 0.12.0 has a native GeometryType; it serializes as the bare
+# "geometry" token, the same shape Snowflake's V3 writer emits. This python
+# schema is only consumed by the manifest writer — the column type readers
+# see is declared in the hand-written metadata.json and in the parquet file
+# (native Geometry logical type via geoarrow-pyarrow).
 PY_SCHEMA = Schema(
     NestedField(1, "id", StringType(), required=False),
-    NestedField(2, "geom", BinaryType(), required=False),
+    NestedField(2, "geom", GeometryType(), required=False),
 )
 
 # The geom field is written as a geoarrow.wkb extension array which
@@ -169,11 +169,12 @@ if __name__ == "__main__":
     print(f"bound encoding: {args.encoding}")
     print()
     print(
-        "DuckDB probe (expected: bound deserialization failure today; "
-        "Total Files Read: 1 once DuckDB lands the GEOMETRY branch):"
+        "DuckDB probe (>= 1.5.5: expected Total Files Read: 1 — manifest "
+        "geometry-bound pruning fires on bbox predicates; a plain "
+        "ST_Intersects returns the same rows but reads all 10 files):"
     )
     print(
         f"  duckdb -c \"LOAD iceberg; LOAD spatial; EXPLAIN ANALYZE SELECT COUNT(*) "
         f"FROM iceberg_scan('{path}') "
-        f"WHERE ST_Intersects(geom, ST_MakeEnvelope(-125, 32, -115, 42));\""
+        f"WHERE ST_Intersects_Extent(geom, ST_MakeEnvelope(-125, 32, -115, 42));\""
     )
