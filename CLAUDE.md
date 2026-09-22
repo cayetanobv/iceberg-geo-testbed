@@ -149,6 +149,14 @@ engine scripts do.
   0.12.0 does add `GeometryType`/`GeographyType` (the fixture writers use them;
   `requirements.txt` pins `>=0.12.0`), but its `to_arrow()` rejects the
   `geoarrow.wkb` extension type our GeoParquet-2.0 files carry.
+- **GeoParquet 2.0 conformance = native logical type AND the `geo` footer.**
+  The V3 writers emit both (helper `testbed/common.py:geoparquet_geo_metadata`).
+  Validate with `pip install --pre geoparquet-io && gpio check all <file>`.
+  Don't use `gpio convert` to add the footer to fixtures: it drops the
+  `PARQUET:field_id` field metadata Iceberg name-mapping relies on. gpio
+  1.5.0 crashes on files with neither geo statistics nor a `geo` bbox (pyarrow
+  writes row-group geo stats for GEOMETRY only, not GEOGRAPHY — the footer
+  bbox is what keeps `v3_geography` checkable).
 - **DuckDB pruning on V3 geometry needs a bbox predicate.** On 1.5.5,
   `ST_Intersects_Extent(geom, env)` / `geom && env` prune to 1/10 files; a plain
   `ST_Intersects` is correct but reads all files (no optimizer rewrite in

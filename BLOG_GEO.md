@@ -11,7 +11,7 @@ We knew engine support wouldn't land the day the spec was approved. Almost a yea
 We built [`iceberg-geo-testbed`](https://github.com/jatorre/iceberg-geo-testbed) — a small, public repo with a reproducible set of geospatial Iceberg fixtures and per-engine probes:
 
 - A **static Iceberg REST catalog** (the "Portolan" pattern — pre-rendered JSON on a bucket) exposing both V2 and V3 tables, served public on GCS and S3.
-- **GeoParquet 2.0–typed parquet files** as the data layer — geometry as Parquet's native `Geometry(crs=)` logical type, not plain `BINARY`. (Iceberg V3 geometry is GeoParquet 2.0 typing at the file level + Iceberg manifest bounds at the table level. The two specs are coupled.)
+- **GeoParquet 2.0 parquet files** as the data layer — geometry as Parquet's native `Geometry(crs=)` logical type, not plain `BINARY`, plus the `geo` footer metadata the [2.0 release candidate](https://github.com/opengeospatial/geoparquet/releases/tag/v2.0.0-rc.1) requires for conformance. (Iceberg V3 geometry is that native Parquet typing at the file level + Iceberg manifest bounds at the table level; Iceberg itself never looks at the `geo` metadata. The two specs are coupled at the type.)
 - **Per-engine runners** that probe each table the way real users would: open it, scan it, run a spatial predicate, see if pruning fires.
 
 Each fixture has the same data: 10 geographically disjoint regions × 1000 points = 10,000 rows across 10 parquet files. A California-window predicate gives a clean signal — a fully-pruning engine should narrow to 1 file out of 10.

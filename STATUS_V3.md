@@ -50,12 +50,22 @@ The shared properties of these fixtures:
   files, `first_row_id` on the manifest-list entry, and the
   `iceberg.schema` metadata key Snowflake-managed V3 emits.
 - **Parquet data files use the native parquet-format 2.11 logical
-  types** via `geoarrow-pyarrow` (GeoParquet 2.0 style) — `Geometry(crs=)`,
-  or `Geography(crs=, algorithm=spherical)` for `v3_geography` — with
+  types** via `geoarrow-pyarrow` — `Geometry(crs=)`, or
+  `Geography(crs=, algorithm=spherical)` for `v3_geography` — with
   WKB-encoded point payloads. Same column-level encoding Snowflake's own
   managed V3 writer produces.
-  Because the data files carry the logical type on their own, they are
-  also usable as **bare parquet conformance files**, with no Iceberg
+- **…and are conformant GeoParquet 2.0 files.** [GeoParquet 2.0.0-rc.1](https://github.com/opengeospatial/geoparquet/releases/tag/v2.0.0-rc.1)
+  (2026-07-19) makes those native types its foundation but still requires
+  the `geo` footer key for conformance; a native-types-only file is
+  "parquet-geo-only", readable by 2.0 readers but not conformant. Since
+  2026-09-22 each data file carries `geo` metadata (`version: "2.0.0"`,
+  `encoding: "WKB"`, `geometry_types: ["Point"]`, per-file `bbox`, and
+  `edges: "spherical"` on `v3_geography`; `crs` omitted so the OGC:CRS84
+  default matches the absent Parquet `crs`). `gpio check all` passes.
+  Iceberg readers ignore this footer key, so nothing changes on the
+  Iceberg side.
+  Because the data files carry both layers on their own, they are also
+  usable as **bare GeoParquet 2.0 conformance files**, with no Iceberg
   metadata involved:
   `https://storage.googleapis.com/cartobq-iceberg-geo-testbed/{v3_geometry,v3_geography}/data/<region>.parquet`
 - Per-file geometry bounds in the `packed_xy_le` encoding (16 bytes:
@@ -83,7 +93,13 @@ DuckDB 1.5.5 (2026-09-21):
 
 Same bytes on disk in both columns of that table — so DuckDB's geography
 gap lives entirely in its Iceberg type mapping. Its Parquet reader already
-does the right thing. That's a much more actionable bug report than
+does the right thing.
+
+One writer-side asymmetry to know about: pyarrow 25.0.1 emits row-group
+`GeospatialStatistics` (the parquet-format 2.11 bbox) for the `GEOMETRY`
+column but **none** for the `GEOGRAPHY` column. So a bare-Parquet reader
+gets row-group bbox pruning on `v3_geometry` and not on `v3_geography`;
+the Iceberg manifest bounds are unaffected (we write those ourselves). That's a much more actionable bug report than
 "geography doesn't work," and it's only visible because the two fixtures
 are byte-identical apart from the annotation.
 
@@ -448,3 +464,15 @@ to the changelog.
   metrics after 1.11.0 — re-test the Spark rows when the next release
   ships. Snowflake / Databricks / Oracle rows not re-run (no
   credentials on the verifying machine).
+- **2026-09-22** — Checked the fixtures against **GeoParquet 2.0.0-rc.1**
+  ([released 2026-07-19](https://github.com/opengeospatial/geoparquet/releases/tag/v2.0.0-rc.1)). The RC makes the native Parquet
+  `GEOMETRY`/`GEOGRAPHY` logical types its foundation (what we already
+  wrote) but still requires the `geo` footer key for conformance; our
+  files were "parquet-geo-only". The three V3 writers now emit the `geo`
+  metadata (per-file `bbox`, `edges: "spherical"` on geography) and
+  `gpio check all` passes on the rebuilt files. Iceberg-side results are
+  unchanged (DuckDB runner 5/5, pyiceberg parses). Also noted: the RC
+  dropped the 1.1 `covering` bbox column and a post-RC change
+  ([#302](https://github.com/opengeospatial/geoparquet/pull/302), 2026-09-07) brought it back as optional for
+  page-level pruning — see SPEC.md. pyarrow writes row-group geo
+  statistics for `GEOMETRY` only, not `GEOGRAPHY`.

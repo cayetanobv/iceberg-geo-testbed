@@ -35,7 +35,7 @@ import geoarrow.pyarrow as ga
 from pyiceberg.schema import Schema
 from pyiceberg.types import GeographyType, NestedField, StringType
 
-from .common import REGIONS, packed_xy_le, stable_seed, wkb_point_le
+from .common import REGIONS, geoparquet_geo_metadata, packed_xy_le, stable_seed, wkb_point_le
 from ._static_catalog import write_static_catalog
 
 ROOT = Path(__file__).parent.parent / "data" / "v3_geography"
@@ -71,15 +71,21 @@ def _write_parquet(region) -> Path:
     # Same seed as v3_geometry so the coordinates match file-for-file.
     rng = random.Random(stable_seed(region.name))
     rows = 1000
-    ids, wkbs = [], []
+    ids, wkbs, xs, ys = [], [], [], []
     for i in range(rows):
         x = rng.uniform(region.xmin, region.xmax)
         y = rng.uniform(region.ymin, region.ymax)
         ids.append(f"{region.name}-{i}")
         wkbs.append(wkb_point_le(x, y))
+        xs.append(x)
+        ys.append(y)
     geog_arr = GEOG_EXT_TYPE.wrap_array(pa.array(wkbs, type=pa.binary()))
     table = pa.table({"id": pa.array(ids, type=pa.string()), "geog": geog_arr},
                      schema=ARROW_SCHEMA)
+    # GeoParquet 2.0 `geo` footer (per-file bbox); Iceberg ignores it.
+    table = table.replace_schema_metadata(
+        {"geo": geoparquet_geo_metadata("geog", xs=xs, ys=ys, edges="spherical")}
+    )
     out_dir = ROOT / "data"
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{region.name}.parquet"

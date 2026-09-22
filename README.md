@@ -60,10 +60,13 @@ convention) and **[STATUS_V3.md](./STATUS_V3.md)** (native V3).
 
 ### Two facts worth carrying away
 
-- **V3 geometry == GeoParquet 2.0 typing + Iceberg manifest bounds.** A V3
-  geometry column's data files must use the *native Parquet Geometry logical
-  type* (what GeoParquet 2.0 standardizes), not plain `BINARY` — DuckDB jumped
-  L0→L2 the moment we switched. The two specs are coupled.
+- **V3 geometry == native Parquet geometry typing + Iceberg manifest bounds.**
+  A V3 geometry column's data files must use the *native Parquet Geometry
+  logical type* — the foundation [GeoParquet 2.0](https://github.com/opengeospatial/geoparquet/releases/tag/v2.0.0-rc.1) is built on — not
+  plain `BINARY`; DuckDB jumped L0→L2 the moment we switched. The two specs
+  are coupled. (GeoParquet 2.0 conformance additionally needs the `geo`
+  footer metadata; our V3 data files carry it, so they double as
+  GeoParquet 2.0 files.)
 - **Flat bbox columns prune everywhere; a bbox *struct* doesn't.** DuckDB scans
   all 10 files on a `bbox.xmin` predicate; BigQuery/Sedona prune to 1. For
   portable Iceberg pruning today, use flat `double` columns. (This is why
@@ -118,9 +121,11 @@ get Snowflake reading the static catalog end-to-end. See
   ```
   gs://cartobq-iceberg-geo-testbed/{v2_flat_columns,v2_bbox_struct,v2_geo_convention,v3_geometry,v3_geography}/metadata/v1.metadata.json
   ```
-- **Bare parquet with parquet-format 2.11 logical types** — for testing a
-  *Parquet* reader without involving Iceberg at all, the data files stand
-  alone over plain HTTPS (no auth):
+- **Bare GeoParquet 2.0 files with parquet-format 2.11 logical types** — for
+  testing a *Parquet* reader without involving Iceberg at all, the data files
+  stand alone over plain HTTPS (no auth). They carry the native
+  `Geometry`/`Geography` logical types **and** the GeoParquet 2.0 `geo` footer
+  metadata (`version: "2.0.0"`; validated with `gpio check all`):
   ```
   https://storage.googleapis.com/cartobq-iceberg-geo-testbed/v3_geometry/data/<region>.parquet   # Geometry(crs=)
   https://storage.googleapis.com/cartobq-iceberg-geo-testbed/v3_geography/data/<region>.parquet  # Geography(crs=, algorithm=spherical)
