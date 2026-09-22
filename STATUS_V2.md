@@ -1,6 +1,8 @@
 # GeoIceberg V2 — engine support status
 
-**Last verified: 2026-09-21.** Living document; PRs welcome.
+**Last verified: 2026-09-21** for DuckDB, BigQuery and PyIceberg. The Snowflake,
+Databricks, Oracle and Sedona rows were last run 2026-05-28; each row states its
+own date and evidence. Living document; PRs welcome.
 
 Part of the **geo track** (see [STATUS_V3.md](./STATUS_V3.md) and
 [SPEC.md](./SPEC.md)). This table tracks each engine's implementation status

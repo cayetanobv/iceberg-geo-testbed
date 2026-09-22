@@ -1,6 +1,9 @@
 # Iceberg V3 native geometry — engine support status
 
-**Last verified: 2026-09-21.** Living document; PRs welcome.
+**Last verified: 2026-09-21** for DuckDB, BigQuery and PyIceberg (GeoParquet 2.0
+conformance of the fixtures: 2026-09-22). The Snowflake, Databricks, Oracle and
+Spark rows were last run 2026-05-28; each row states its own date and evidence.
+Living document; PRs welcome.
 
 Part of the **geo track**. This table tracks each engine's implementation status
 against the native V3 geometry/geography types defined in the

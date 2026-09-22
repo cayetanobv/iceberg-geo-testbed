@@ -1,6 +1,9 @@
 # Iceberg catalog interoperability — engine support status
 
-**Last verified: 2026-09-21.** Living document; PRs welcome.
+**Last verified: 2026-09-21** for DuckDB, BigQuery and the GCS / S3 / CloudFront /
+Worker fronts. The Snowflake, Databricks, Oracle and Glue rows were last run
+2026-05-28; each row states its own date and evidence. Living document; PRs
+welcome.
 
 This is the **catalog track** of the testbed. It asks a question separate from
 geospatial: *can you publish a public Apache Iceberg dataset that any engine can
