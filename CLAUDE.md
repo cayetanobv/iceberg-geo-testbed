@@ -186,11 +186,13 @@ engine scripts do.
   1.5.6): (a) `ST_Intersects` → bbox pre-filter rewrite so pruning is
   automatic (duckdb-spatial); (b) `geography` type mapping in `iceberg_scan`
   (duckdb-iceberg: `Not implemented Error: Geography support`). Neither is
-  filed yet (none found as of 2026-10-05).
+  filed yet (none found as of 2026-10-09). duckdb-iceberg#1467 (`&&`
+  pushdown) is on `main`/2.0 only, and #1464 reports `&&` pruning regressing on
+  the 2.0 nightly — re-check pruning when 2.0 ships.
 - **pyiceberg 0.12.0** — `scan().to_arrow()` fails on the `geoarrow.wkb`
-  extension type (`UnsupportedPyArrowTypeException`) for our V3 fixtures; no
-  upstream issue found as of 2026-10-05 — worth filing with `v3_geometry` as
-  the repro.
+  extension type (`UnsupportedPyArrowTypeException`) for our V3 fixtures
+  (also on Snowflake-written V3). Tracked upstream in
+  apache/iceberg-python#4079; re-test when a fix lands.
 - **Spark geometry** — Apache Iceberg 1.12.0 (2026-09-30) ships Spark 4.1
   geometry read/write (#16851, #17073) and geometry bbox metrics (#17161).
   Re-run `engines/sedona` / Dataproc / EMR probes on `iceberg-spark-runtime`
